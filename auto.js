@@ -275,15 +275,8 @@ async function startFarmingProcess(bot) {
         await sleep(1000); 
 
         bot.chat('/home'); 
-        await randomSleep(6000, 7000); 
-         
-        console.log('[Farm] Đang lùi xéo bằng phím D + S trong 0.5 giây...');
-        bot.setControlState('forward', true);  
-        bot.setControlState('right', true); 
-        
-        await sleep(500); 
         bot.clearControlStates();
-        await sleep(8000);
+        await sleep(5000);
         bot.chat('/sit');
 
         const finalYaw = bot.entity.yaw;
