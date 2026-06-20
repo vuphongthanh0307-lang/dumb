@@ -96,7 +96,7 @@ function createBot() {
             console.log('>>> [Anti-Bot] Bị Sonar soi! Đứng im như tượng chờ nó cấp giấy chứng nhận...');
             bot.clearControlStates();
             botState = 'WAIT_AUTO';
-            isSonarKick = true; // Bật cờ dự phòng
+            isSonarKick = true; 
         }
 
         // --- BỘ LỌC TỰ ĐỘNG JOIN PARTY ---
@@ -108,11 +108,14 @@ function createBot() {
             }
         }
 
-        // 2. BẢO TRÌ/KICK -> NẰM CHỜ
-        if (lowerMsg.includes('kicked from') || lowerMsg.includes('bảo trì') || lowerMsg.includes('đã đóng')) {
-            console.log('[Hệ Thống] Phát hiện Bảo Trì/Kick! Đang nằm chờ server tự kéo...');
-            botState = 'MAINTENANCE'; 
+        // ==========================================
+        // [FIX LỖI NẰM CHỜ]: ĐỔI THÀNH IN_HUB ĐỂ TỰ ĐỘNG LẤY LA BÀN RA ĐỤC LỖ
+        // ==========================================
+        if (lowerMsg.includes('kicked from') || lowerMsg.includes('bảo trì') || lowerMsg.includes('đã đóng') || lowerMsg.includes('server closed')) {
+            console.log('[Hệ Thống] Phát hiện Server Reset/Bảo trì búng ra Sảnh! Lấy la bàn đục lỗ vô lại...');
+            botState = 'IN_HUB'; 
             isComboRunning = false; 
+            bot.clearControlStates();
         }
 
         const isKilledByPlayer = message.includes(bot.username) && 
@@ -127,25 +130,28 @@ function createBot() {
             setTimeout(() => { if (botState === 'FARMING') bot.chat('/sit'); }, 3000);
         }
 
-        // KHÓA HUB: CHỈ MÚA KHI THẤY THÔNG BÁO VÀO CỤM
+        // ==========================================
+        // [BỘ THANH TẨY]: RESET SẠCH NÚT BẤM KHI VỪA VÀO CỤM
+        // ==========================================
         if (lowerMsg.includes('vừa tham gia máy chủ') && lowerMsg.includes(bot.username.toLowerCase())) {
             if (botState !== 'FARMING') {
                 console.log(`[Mắt Thần] Thấy thông báo: ${message}`);
                 console.log('[Mắt Thần] ĐÃ LỌT VÀO CỤM FARM AN TOÀN! Khóa Hub, Bắt đầu múa!');
                 botState = 'FARMING';
                 isComboRunning = false; 
+                bot.clearControlStates(); // Thanh tẩy phím kẹt sau khi văng
                 startFarmingProcess(bot);
             }
         }
     });
 
     // ==========================================
-    // MẮT THẦN ĐỌC TÚI ĐỒ (ĐÃ KHÓA CỨNG KHI FARM)
+    // MẮT THẦN ĐỌC TÚI ĐỒ 
     // ==========================================
     setInterval(() => {
         if (!currentBot || !currentBot.inventory) return;
         
-        if (botState === 'FARMING') return; 
+        if (botState === 'FARMING' || botState === 'WAIT_AUTO') return; 
 
         const items = currentBot.inventory.items();
         const hasCompass = items.some(i => i.name === 'compass');
@@ -164,7 +170,8 @@ function createBot() {
     }, 3000); 
 
     bot.on('windowOpen', async (window) => {
-        if (isGUIOpen || botState === 'MAINTENANCE') return; 
+        // [FIX LỖI]: Bỏ chữ MAINTENANCE đi để không bị khóa menu
+        if (isGUIOpen || botState === 'WAIT_AUTO') return; 
         isGUIOpen = true; 
         try {
             console.log('[Menu] Đang mở GUI...');
@@ -180,9 +187,6 @@ function createBot() {
         }
     });
 
-    // ==========================================
-    // BƯỚC 2: ĐỌC BẢNG KICK XÁC MINH THÀNH CÔNG
-    // ==========================================
     bot.on('kicked', (reason) => {
         let reasonStr = '';
         try { reasonStr = JSON.stringify(reason); } 
@@ -213,12 +217,9 @@ function createBot() {
         isLoggingIn = false;
         botState = 'DISCONNECTED'; 
 
-        // ==========================================
-        // BƯỚC 3: ĐẾM NGƯỢC 12 GIÂY CHO RENDER KHỎI NGỦ + SERVER KỊP LƯU IP
-        // ==========================================
         if (isSonarKick) {
-            isSonarKick = false; // Trả lại cờ
-            failCount = 0; // Tẩy trắng rớt mạng
+            isSonarKick = false; 
+            failCount = 0; 
             console.log(`[Anti-Bot] Đang chờ 12 giây để server cập nhật danh sách...`);
             
             let waitTime = 12;
@@ -231,7 +232,7 @@ function createBot() {
                     console.log(`[Anti-Bot] Hết giờ! Phi thẳng vô cụm lượm lúa!!!`);
                     createBot();
                 }
-            }, 1000); // Lặp lại mỗi 1 giây
+            }, 1000); 
             return; 
         }
 
@@ -248,7 +249,7 @@ function createBot() {
 }
 
 // ==================================================
-// KỊCH BẢN MÚA CỦA WINLXAG5555
+// KỊCH BẢN MÚA CỦA WINLXAG5555 (GIỮ NGUYÊN 100%)
 // ==================================================
 async function startFarmingProcess(bot) {
     if (isComboRunning) return; 
@@ -275,8 +276,15 @@ async function startFarmingProcess(bot) {
         await sleep(1000); 
 
         bot.chat('/home'); 
+        await randomSleep(6000, 7000); 
+         
+        console.log('[Farm] Đang lùi xéo bằng phím D + S trong 0.5 giây...');
+        bot.setControlState('forward', true);  
+        bot.setControlState('right', true); 
+        
+        await sleep(500); 
         bot.clearControlStates();
-        await sleep(5000);
+        await sleep(8000);
         bot.chat('/sit');
 
         const finalYaw = bot.entity.yaw;
@@ -312,11 +320,10 @@ rl.on('line', async (input) => {
 
     const rawInput = input.trim();
     const cmdParts = rawInput.toLowerCase().split(/\s+/); 
-    const cmd = cmdParts[0]; // Cái chữ đầu tiên có dấu / (VD: /wdj)
-    const val = cmdParts[1] ? parseFloat(cmdParts[1]) : null; // Cái số thời gian/góc độ phía sau
+    const cmd = cmdParts[0]; 
+    const val = cmdParts[1] ? parseFloat(cmdParts[1]) : null; 
 
     try {
-        // --- 1. LỆNH DỪNG LẠI HOẶC ĐỨNG DẬY ---
         if (cmd === '/stop') { 
             currentBot.clearControlStates(); 
             console.log('>> [WASD] PHANH GẤP! Đã dừng mọi di chuyển.'); 
@@ -329,7 +336,6 @@ rl.on('line', async (input) => {
             return; 
         }
 
-        // --- 2. LỆNH QUAY CAMERA THEO ĐỘ (ĐÃ XÓA VUNG TAY) ---
         if (cmd === '/trai' || cmd === '/trái') { 
             const angle = val !== null ? val : 90;
             await currentBot.look(currentBot.entity.yaw + (angle * Math.PI / 180), currentBot.entity.pitch, false); 
@@ -357,14 +363,10 @@ rl.on('line', async (input) => {
             console.log(`>> [CAMERA] Cúi nhìn XUỐNG ${angle} độ`); return; 
         }
 
-        // --- 3. LỆNH DI CHUYỂN KẾT HỢP (COMBO WASD + JUMP + SHIFT) ---
-        // Xóa dấu / ở đầu để kiểm tra các phím bên trong
         const moveKeys = cmd.replace('/', '');
         
-        // Chỉ chạy khối này nếu chuỗi lệnh CHỈ CHỨA các chữ w, a, s, d, j, sh
         if (/^(w|a|s|d|j|sh)+$/.test(moveKeys)) {
             
-            // Xóa sạch trạng thái cũ trước khi gán combo mới
             currentBot.clearControlStates();
 
             let logMsg = ">> [WASD] Thi triển Combo:";
@@ -376,7 +378,6 @@ rl.on('line', async (input) => {
             if (moveKeys.includes('sh')) { currentBot.setControlState('sneak', true); logMsg += ' (Đè Shift)'; }
             if (moveKeys.includes('j')) { currentBot.setControlState('jump', true); logMsg += ' + Nhảy'; }
 
-            // Nếu có nhập số thời gian (mili-giây)
             if (val) {
                 console.log(`${logMsg} (Trong ${val}ms)`);
                 setTimeout(() => {
@@ -389,14 +390,12 @@ rl.on('line', async (input) => {
             return;
         }
 
-        // --- 4. NẾU LÀ LỆNH IN-GAME (VD: /home, /spawn) ---
         if (rawInput.startsWith('/')) {
             currentBot.chat(rawInput);
             console.log(`[Bot Đã Nhập Lệnh Game]: ${rawInput}`);
             return;
         }
 
-        // --- 5. NẾU LÀ CHAT CÔNG CỘNG ---
         const now = Date.now();
         if (now - lastChatTime < 1500) {
             console.log('>>> [CẢNH BÁO] Gõ chậm thôi! Kẻo server nó khóa mõm!');
