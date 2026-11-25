@@ -279,19 +279,19 @@ async function startFarmingProcess(bot) {
 
     try {
         bot.setQuickBarSlot(0); 
-        await sleep(5000);
+        await sleep(7000);
         
         bot.setControlState('sneak', true); 
-        await sleep(1000); 
+        await sleep(3000); 
         
         bot.swingArm('right'); 
-        await sleep(800);
+        await sleep(500);
         bot.activateItem(); 
-        await sleep(800);
+        await sleep(500);
         bot.activateItem(); 
-        await sleep(800);
+        await sleep(500);
         bot.activateItem(); 
-        await sleep(800);
+        await sleep(500);
 
         bot.setControlState('sneak', false); 
         bot.clearControlStates(); 
